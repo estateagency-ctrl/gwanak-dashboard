@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>한걸음부동산 | 관악구 부동산 대시보드</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+:root{--navy:#12305c;--navy2:#1d4a8a;--teal:#0f8b8d;--gold:#e0a526;--bg:#f2f5fa;--card:#fff;--ink:#1c2433;--mute:#6a7587;--line:#e2e7ef;--up:#d83a3a;--down:#2563c9;--sale:#d83a3a;--jeon:#0f8b8d;--wol:#c77d12}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:14px;line-height:1.5}
+.wrap{max-width:1360px;margin:0 auto;padding:0 20px}
+header.top{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff}
+header.top .wrap{display:flex;align-items:center;gap:18px;padding-top:14px;padding-bottom:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px}
+.brand svg{width:64px;height:64px;flex:none}
+.brand h1{margin:0;font-size:26px;font-weight:900;letter-spacing:-.5px}
+.brand h1 small{display:block;font-size:12px;font-weight:500;color:#bcd0f0;letter-spacing:.5px;margin-bottom:2px}
+.tel{margin-left:auto;text-align:right}
+.tel b{font-size:22px;font-weight:900;color:var(--gold);letter-spacing:.5px}
+.tel span{display:block;font-size:12px;color:#bcd0f0}
+.controls{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:900;box-shadow:0 2px 8px rgba(20,40,80,.06)}
+.controls .wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
+.grp{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.grp>label{font-size:12px;color:var(--mute);font-weight:700;margin-right:2px}
+.chip{border:1px solid var(--line);background:#fff;color:var(--ink);padding:6px 13px;border-radius:999px;cursor:pointer;font:inherit;font-weight:500}
+.chip:hover{border-color:var(--navy2)}
+.chip.on{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700}
+input[type=date],input[type=text],input[type=number],select,textarea{font:inherit;border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#fff;color:var(--ink)}
+section{margin:22px 0}
+h2{font-size:18px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+h2 .no{background:var(--navy);color:#fff;border-radius:6px;font-size:12px;padding:2px 8px}
+h2 small{font-weight:400;color:var(--mute);font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(20,40,80,.04)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 15px}
+.kpi .l{font-size:12px;color:var(--mute);font-weight:500}
+.kpi .v{font-size:23px;font-weight:900;margin:2px 0;letter-spacing:-.5px}
+.kpi .s{font-size:12px;color:var(--mute)}
+.up{color:var(--up);font-weight:700}.down{color:var(--down);font-weight:700}.flat{color:var(--mute)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:980px){.grid2,.grid3{grid-template-columns:1fr}}
+.chartbox{position:relative;height:250px}
+.note{font-size:12px;color:var(--mute)}
+/* top10 */
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.tab{padding:9px 22px;border-radius:10px;border:1px solid var(--line);background:#fff;cursor:pointer;font:inherit;font-weight:700}
+.tab.on[data-k=T]{background:var(--sale);color:#fff;border-color:var(--sale)}
+.tab.on[data-k=J]{background:var(--jeon);color:#fff;border-color:var(--jeon)}
+.tab.on[data-k=M]{background:var(--wol);color:#fff;border-color:var(--wol)}
+.t10{display:grid;grid-template-columns:minmax(330px,5fr) 7fr;gap:14px;align-items:start}
+@media(max-width:980px){.t10{grid-template-columns:1fr}}
+.list{max-height:640px;overflow:auto;padding:6px}
+.item{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:10px 8px;border-radius:10px;cursor:pointer;border:2px solid transparent}
+.item:hover{background:#f4f7fc}
+.item.sel{background:#fff7e0;border-color:var(--gold)}
+.rank{width:30px;height:30px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px}
+.item:nth-child(-n+3) .rank{background:var(--gold);color:#3a2a00}
+.item .nm{font-weight:700}
+.item .sub{font-size:12px;color:var(--mute)}
+.item .pr{text-align:right;font-weight:900}
+.item .pr small{display:block;font-weight:400;color:var(--mute);font-size:11px}
+#map,#amap{height:430px;border-radius:12px;border:1px solid var(--line);z-index:1}
+.detail{margin-top:12px}
+.detail h3{margin:0 0 6px;font-size:16px}
+table{border-collapse:collapse;width:100%}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;white-space:nowrap}
+th{background:#f4f7fc;color:var(--mute);font-weight:700;font-size:12px;position:sticky;top:0}
+td.r,th.r{text-align:right}
+.scroll{max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#eaf0fb;color:var(--navy2)}
+.badge.warn{background:#fff1d6;color:#9a5d00}
+.pin{background:var(--navy);color:#fff;border:2px solid #fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.pin.sel{background:var(--gold);color:#222;width:36px;height:36px;font-size:15px;transform:translate(-4px,-4px);z-index:999}
+.pin.approx{border-style:dashed}
+.pricetag{background:#fff;border:1px solid var(--navy);border-radius:6px;padding:1px 6px;font-weight:700;font-size:11px;white-space:nowrap;margin-top:3px;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+/* listings */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.lst{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;position:relative;transition:.15s}
+.lst:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(20,40,80,.12)}
+.lst.sel{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
+.lst .tp{font-size:11px;font-weight:700;color:#fff;padding:2px 9px;border-radius:999px;display:inline-block}
+.lst .tp.T{background:var(--sale)}.lst .tp.J{background:var(--jeon)}.lst .tp.M{background:var(--wol)}
+.lst h4{margin:8px 0 2px;font-size:16px}
+.lst .p{font-size:20px;font-weight:900;margin:4px 0}
+.lst .del{position:absolute;right:8px;top:8px;border:0;background:#f1f3f7;border-radius:6px;cursor:pointer;color:var(--mute);width:24px;height:24px}
+.add{border:2px dashed #b9c5da;background:#fafcff;color:var(--navy2);display:flex;align-items:center;justify-content:center;font-weight:700;min-height:140px;border-radius:14px;cursor:pointer;font:inherit}
+.btn{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:8px 16px;cursor:pointer;font:inherit;font-weight:700}
+.btn.ghost{background:#eef2f9;color:var(--navy)}
+dialog{border:0;border-radius:16px;padding:22px;max-width:440px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(10,20,40,.45)}
+dialog label{display:block;font-size:12px;font-weight:700;color:var(--mute);margin:10px 0 3px}
+dialog input,dialog select,dialog textarea{width:100%}
+/* location */
+.loc{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:1180px){.loc{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.loc{grid-template-columns:1fr}}
+.loc .blk{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
+.loc h3{margin:0 0 8px;font-size:15px;display:flex;gap:6px;align-items:center;color:var(--navy)}
+.loc h4{margin:10px 0 3px;font-size:12px;color:var(--mute);text-transform:none}
+.loc ul{margin:0;padding:0;list-style:none}
+.loc li{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.loc li span:last-child{color:var(--mute);white-space:nowrap;font-size:12px}
+.loc li.pl{display:block}.loc li.pl span:last-child{display:block;white-space:normal}
+.locHead{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.locHead .nm{font-size:18px;font-weight:900}
+.spin{color:var(--mute);padding:14px}
+footer{background:#0e2342;color:#b9c8e2;margin-top:34px;padding:22px 0;font-size:12px}
+footer b{color:#fff}
+.err{background:#fff1f1;border:1px solid #f2b8b8;color:#a02020;padding:10px 14px;border-radius:10px;margin:12px 0}
+@media print{.controls{position:static}.scroll,.list{max-height:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="brand">
+    <svg viewBox="0 0 100 100" aria-label="한걸음부동산 로고">
+      <defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6c443"/><stop offset="1" stop-color="#d89410"/></linearGradient></defs>
+      <circle cx="50" cy="50" r="47" fill="#0c2549" stroke="url(#lg)" stroke-width="3.5"/>
+      <path d="M10 72 L33 38 L44 54 L58 30 L90 72 Z" fill="#2b5aa0"/>
+      <path d="M58 30 L66 42 L60 40 L56 46 L52 40 Z" fill="#fff" opacity=".9"/>
+      <path d="M33 38 L38 46 L33 44 L29 46 Z" fill="#fff" opacity=".85"/>
+      <path d="M30 70 L50 50 L70 70 Z" fill="url(#lg)"/>
+      <rect x="37" y="68" width="26" height="12" fill="#fff"/>
+      <rect x="46" y="71" width="8" height="9" fill="#0c2549"/>
+      <path d="M22 86 q28 8 56 0" stroke="url(#lg)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </svg>
+    <h1><small>서울 관악구 전문 공인중개사 · 봉천 · 신림 · 남현</small>한걸음부동산</h1>
+  </div>
+  <div class="tel"><span>관악구 부동산 상담</span><b>Tel. 000-XXXX-XXXX</b></div>
+</div></header>
+
+<div class="controls"><div class="wrap">
+  <div class="grp"><label>지역</label><span id="dongChips"></span></div>
+  <div class="grp"><label>기간</label>
+    <button class="chip" data-mode="week">주간</button>
+    <button class="chip on" data-mode="month">월간</button>
+    <button class="chip" data-mode="custom">직접지정</button>
+    <input type="date" id="dStart"> ~ <input type="date" id="dEnd">
+    <button class="btn" id="apply">조회</button>
+  </div>
+  <span class="note" id="status"></span>
+</div></div>
+
+<main class="wrap">
+<div id="errbox"></div>
+
+<section>
+  <h2><span id="scopeTitle">관악구 전체</span> 시장 요약 <small id="rangeLabel"></small></h2>
+  <div class="kpis" id="kpis"></div>
+</section>
+
+<section>
+  <h2>시장 지표 <small>한국부동산원 R-ONE · 국토교통부 실거래가</small></h2>
+  <div class="grid2">
+    <div class="card"><b>아파트 매매·전세가격지수</b> <span class="note" id="idxNote"></span>
+      <select id="lookback" style="float:right"><option value="13">3개월</option><option value="26" selected>6개월</option><option value="52">1년</option><option value="156">3년</option></select>
+      <div class="chartbox"><canvas id="chIdx"></canvas></div></div>
+    <div class="card"><b>선택기간 거래 추이</b> <span class="note" id="trendNote"></span>
+      <div class="chartbox"><canvas id="chTrend"></canvas></div></div>
+    <div class="card"><b>관악구 월별 아파트 매매 거래량</b> <span class="note">한국부동산원(동·호수)</span>
+      <div class="chartbox"><canvas id="chVol"></canvas></div></div>
+    <div class="card"><b>미분양 주택 현황</b> <span class="note">관악구(막대) · 서울(선, 우측축)</span>
+      <div class="chartbox"><canvas id="chUnsold"></canvas></div></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="no">동별</span><span id="dongListTitle">동별 현황</span> <small>동 선택 시 해당 동의 아파트 리스트를 보여줍니다</small></h2>
+  <div class="grid2" style="grid-template-columns:minmax(320px,4fr) 8fr">
+    <div class="card"><div id="dongTable"></div><div class="chartbox" style="height:200px;margin-top:10px"><canvas id="chPrice"></canvas></div><div class="note" style="text-align:center">매매 가격대별 거래건수</div></div>
+    <div class="card"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><b id="aptListTitle">아파트 리스트</b><input type="text" id="aptQ" placeholder="단지명 검색" style="margin-left:auto"></div>
+      <div class="scroll" id="aptList"></div></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="no">TOP 10</span><span id="t10Title">관악구 아파트 Top10</span> <small>선택한 기간·지역 기준 · 단지를 클릭하면 지도에 위치와 최근 실거래가가 표시됩니다</small></h2>
+  <div class="tabs">
+    <button class="tab on" data-k="T">매매</button><button class="tab" data-k="J">전세</button><button class="tab" data-k="M">월세</button>
+    <span style="margin-left:auto" class="grp"><label>정렬</label><button class="chip on" data-sort="cnt">거래많은순</button><button class="chip" data-sort="price">가격높은순</button></span>
+  </div>
+  <div class="t10">
+    <div class="card list" id="t10list"></div>
+    <div><div id="map"></div><div class="card detail" id="detail"></div></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="no">추천매물</span>한걸음부동산 추천매물 <small>샘플 4건 · 직접 추가/삭제 가능 · 카드를 클릭하면 입지분석이 펼쳐집니다</small></h2>
+  <div class="cards" id="listings"></div>
+</section>
+
+<section id="locSec">
+  <h2><span class="no">입지분석</span>단지 입지 한눈에 보기 <small>교통 · 학군 · 상권 · 개발계획</small></h2>
+  <div id="locBody"><div class="card spin">Top10 단지 또는 추천매물을 선택하면 입지분석이 표시됩니다.</div></div>
+</section>
+</main>
+
+<footer><div class="wrap">
+  <b>한걸음부동산</b> · 서울 관악구 전문 공인중개사 · Tel. 000-XXXX-XXXX<br>
+  자료: 국토교통부 아파트 매매·전월세 실거래가(공공데이터포털), 한국부동산원 R-ONE 부동산통계, 지도 © OpenStreetMap contributors. 입지 정보는 OpenStreetMap 기반이며 거리는 직선거리 기준(도보 시간은 추정)입니다.<br>
+  실거래가는 계약 후 30일 이내 신고 기준으로 최근 거래는 추후 반영될 수 있습니다. 본 자료는 참고용이며 투자 결정의 근거가 될 수 없고, 추천매물은 샘플입니다.
+</div></footer>
+
+<dialog id="dlg"><form method="dialog" id="addForm">
+  <h3 style="margin:0">추천매물 추가</h3>
+  <label>단지명</label><input name="apt" required placeholder="예) 관악드림타운">
+  <label>동</label><select name="dong"><option>봉천동</option><option>신림동</option><option>남현동</option></select>
+  <label>거래유형</label><select name="type"><option value="T">매매</option><option value="J">전세</option><option value="M">월세</option></select>
+  <label>가격 (만원, 월세는 보증금/월세 형식 예: 5000/80)</label><input name="price" required placeholder="예) 125000">
+  <label>전용면적(㎡) / 층</label><div style="display:flex;gap:8px"><input name="area" type="number" step="0.01" placeholder="84.9"><input name="floor" type="number" placeholder="층"></div>
+  <label>한줄 코멘트</label><textarea name="memo" rows="2"></textarea>
+  <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost" value="cancel" formnovalidate>취소</button><button class="btn" value="ok">추가</button></div>
+</form></dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DONGS=['봉천동','신림동','남현동'];
+const CENTER={'봉천동':[37.4795,126.9530],'신림동':[37.4840,126.9290],'남현동':[37.4745,126.9790],'전체':[37.4784,126.9516]};
+const KIND={T:'매매',J:'전세',M:'월세'};
+const S={dong:'전체',mode:'month',start:'',end:'',kind:'T',sort:'cnt',sel:null,deals:[],rone:null,loadedKey:'',top:[],aptQ:''};
+const GEO={}; let geoRun=0;
+
+/* ---------- format ---------- */
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const addDays=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return ymd(d)};
+function won(m){ // 만원 -> 억 표기
+  m=Math.round(m); if(!m) return '-';
+  const e=Math.floor(m/10000), r=m%10000;
+  if(e&&r) return e+'억 '+r.toLocaleString()+'만';
+  if(e) return e+'억';
+  return r.toLocaleString()+'만';
+}
+const pyeong=a=>a/3.3058;
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const pct=(a,b)=>b?((a/b-1)*100):0;
+const chg=v=>`<span class="${v>0.005?'up':v<-0.005?'down':'flat'}">${v>0.005?'▲':v<-0.005?'▼':'–'} ${Math.abs(v).toFixed(2)}%</span>`;
+function dist(a,b,c,d){const R=6371000,t=x=>x*Math.PI/180,dl=t(c-a),dn=t(d-b),h=Math.sin(dl/2)**2+Math.cos(t(a))*Math.cos(t(c))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+const dtxt=m=>m<1000?Math.round(m/10)*10+'m':(m/1000).toFixed(1)+'km';
+const walk=m=>'도보 약 '+Math.max(1,Math.round(m*1.3/75))+'분';
+
+/* ---------- controls ---------- */
+function buildDongChips(){
+  $('#dongChips').innerHTML=['전체',...DONGS].map(d=>`<button class="chip ${S.dong===d?'on':''}" data-dong="${d}">${d==='전체'?'관악구 전체':d}</button>`).join(' ');
+}
+function setMode(m){
+  S.mode=m; $$('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+  if(m==='week') $('#dStart').value=addDays($('#dEnd').value,-6);
+  if(m==='month') $('#dStart').value=addDays($('#dEnd').value,-29);
+}
+document.addEventListener('click',e=>{
+  const c=e.target.closest('button'); if(!c) return;
+  if(c.dataset.dong){S.dong=c.dataset.dong;S.sel=null;buildDongChips();renderAll();}
+  else if(c.dataset.mode){setMode(c.dataset.mode);if(c.dataset.mode!=='custom')reload();}
+  else if(c.id==='apply'){S.mode='custom';$$('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode==='custom'));reload();}
+  else if(c.classList.contains('tab')){S.kind=c.dataset.k;S.sel=null;$$('.tab').forEach(t=>t.classList.toggle('on',t===c));renderTop();}
+  else if(c.dataset.sort){S.sort=c.dataset.sort;S.sel=null;$$('[data-sort]').forEach(t=>t.classList.toggle('on',t===c));renderTop();}
+});
+['dStart','dEnd'].forEach(id=>$('#'+id).addEventListener('change',()=>{
+  if(id==='dEnd'&&S.mode!=='custom') setMode(S.mode);
+}));
+$('#lookback').addEventListener('change',renderIndexChart);
+$('#aptQ').addEventListener('input',e=>{S.aptQ=e.target.value.trim();renderAptList();});
+
+/* ---------- data ---------- */
+async function reload(){
+  const end=$('#dEnd').value, start=$('#dStart').value;
+  if(!start||!end||start>end){showErr('기간을 올바르게 지정해 주세요.');return}
+  S.start=start;S.end=end;
+  const lo=addDays(end,-92)<start?addDays(end,-92):start; // 상세(최근 실거래)용으로 최소 3개월 확보
+  const from=lo.slice(0,7).replace('-',''), to=end.slice(0,7).replace('-','');
+  const key=from+'-'+to;
+  $('#status').textContent='실거래 데이터 불러오는 중…';
+  try{
+    if(S.loadedKey!==key){
+      const j=await jget(`/api/deals?from=${from}&to=${to}`);
+      S.deals=j.deals.filter(d=>d.area>=20); S.loadedKey=key;
+    }
+    showErr('');
+    $('#status').textContent='실거래 '+S.deals.length.toLocaleString()+'건 로드'+(STATIC?' · 데이터 기준일 '+(window.SNAP||''):' · 최종 갱신 '+new Date().toLocaleTimeString('ko-KR'));
+    renderAll();
+  }catch(e){showErr('실거래가 데이터를 불러오지 못했습니다: '+e.message);$('#status').textContent='';}
+}
+async function loadRone(){
+  try{S.rone=await jget('/api/rone');renderKpis();renderIndexChart();renderVolUnsold();}
+  catch(e){showErr('한국부동산원 지표 로드 실패: '+e.message)}
+}
+function showErr(m){$('#errbox').innerHTML=m?`<div class="err">${esc(m)}</div>`:''}
+
+const STATIC=new URLSearchParams(location.search).has('static')||(!['localhost','127.0.0.1'].includes(location.hostname)&&location.protocol!=='file:');
+let GEOSTATIC=null;
+const MIRRORS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
+async function staticApi(url){
+  const u=new URL(url,location.href),p=u.pathname;
+  if(p==='/api/rone') return (await fetch('data/rone.json')).json();
+  if(p==='/api/deals'){
+    const f=u.searchParams.get('from'),t=u.searchParams.get('to'),ms=[];let y=+f.slice(0,4),m=+f.slice(4);
+    while(y*100+m<=+t){ms.push(''+y+String(m).padStart(2,'0'));if(++m>12){m=1;y++}}
+    const parts=await Promise.all(ms.map(async ym=>{const r=await fetch(`data/deals-${ym}.json`);return r.ok?r.json():[]}));
+    return {deals:parts.flat(),months:ms,snapshot:true};
+  }
+  if(p==='/api/geo'){
+    GEOSTATIC??=await fetch('data/geo.json').then(r=>r.ok?r.json():{}).catch(()=>({}));
+    return GEOSTATIC[u.searchParams.get('name')+'|'+u.searchParams.get('dong')]||{lat:null,lng:null,exact:false};
+  }
+  if(p==='/api/poi'){
+    const lat=+u.searchParams.get('lat'),lng=+u.searchParams.get('lng');
+    const q=`[out:json][timeout:25];(nwr(around:1500,${lat},${lng})["railway"~"station|halt"]["name"];nwr(around:500,${lat},${lng})["highway"="bus_stop"]["name"];nwr(around:1500,${lat},${lng})["amenity"="school"]["name"];nwr(around:1800,${lat},${lng})["shop"~"supermarket|department_store|mall"]["name"];nwr(around:1000,${lat},${lng})["amenity"="cafe"]["name"];nwr(around:2500,${lat},${lng})["amenity"~"townhall|police|post_office|fire_station|hospital"]["name"];);out center tags 500;`;
+    for(const m of MIRRORS){
+      try{
+        const r=await fetch(m,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:AbortSignal.timeout(14000)});
+        if(!r.ok)continue;const j=await r.json();
+        return {ok:true,items:j.elements.map(e=>{const t=e.tags||{};const la=e.lat??(e.center&&e.center.lat),lo=e.lon??(e.center&&e.center.lon);
+          let cat=t.railway?'station':t.highway==='bus_stop'?'bus':t.amenity==='school'?'school':t.shop?'shop':t.amenity==='cafe'?'cafe':t.amenity==='hospital'?'hospital':t.amenity?'gov':null;
+          return cat&&la?{cat,name:t.name,lat:la,lng:lo,shop:t.shop||''}:null}).filter(Boolean)};
+      }catch(e){}
+    }
+    return {ok:false,items:[]};
+  }
+  throw new Error('unknown api');
+}
+async function jget(url,tries=4){
+  if(STATIC) return staticApi(url);
+  let last;
+  for(let i=0;i<tries;i++){
+    try{const r=await fetch(url,{cache:'no-store'});const j=await r.json();if(r.ok)return j;last=new Error(j.error||r.status)}
+    catch(e){last=e}
+    await new Promise(r=>setTimeout(r,1200*(i+1)));
+  }
+  throw new Error(location.protocol==='file:'?'서버 주소(http://localhost:8787)로 접속해 주세요':'서버 연결 실패 - 터미널에서 node server.js 실행 여부를 확인하세요 ('+(last&&last.message)+')');
+}
+const inRange=d=>d.date>=S.start&&d.date<=S.end;
+const inDong=d=>S.dong==='전체'||d.dong===S.dong;
+const cur=(k)=>S.deals.filter(d=>(k?d.k===k:true)&&inRange(d)&&inDong(d));
+
+/* ---------- KPI ---------- */
+function latestIdx(arr,end){let r=null,i=-1;arr.forEach((x,k)=>{if(x.d<=end){r=x;i=k}});return {r,i}}
+function renderKpis(){
+  const T=cur('T'),J=cur('J'),M=cur('M');
+  const t84=T.filter(d=>d.area>=59&&d.area<=85), j84=J.filter(d=>d.area>=59&&d.area<=85);
+  const aT=avg(t84.map(d=>d.price)), aJ=avg(j84.map(d=>d.deposit));
+  const rate=aT&&aJ?aJ/aT*100:0;
+  const k=[];
+  k.push(kpi('아파트 매매 거래',T.length+'건',`평균 ${won(avg(T.map(d=>d.price)))} · 최고 ${won(Math.max(0,...T.map(d=>d.price)))}`));
+  k.push(kpi('전용 59~85㎡ 평균 매매가',aT?won(aT):'-',`${t84.length}건 · 평당 ${t84.length?won(avg(t84.map(d=>d.price/pyeong(d.area)))):'-'}`));
+  k.push(kpi('전세 거래',J.length+'건',`평균 보증금 ${won(avg(J.map(d=>d.deposit)))}`));
+  k.push(kpi('월세 거래',M.length+'건',`평균 ${won(avg(M.map(d=>d.deposit)))} / ${Math.round(avg(M.map(d=>d.rent)))}만`));
+  k.push(kpi('전세가율(59~85㎡)',rate?rate.toFixed(1)+'%':'-','평균 전세가 ÷ 평균 매매가'));
+  const R=S.rone;
+  if(R){
+    const a=latestIdx(R.saleG,S.end), b=latestIdx(R.jeonG,S.end);
+    if(a.r){const w=pct(a.r.v,R.saleG[a.i-1]?.v),m=pct(a.r.v,R.saleG[a.i-4]?.v);
+      k.push(kpi('매매가격지수(관악)',a.r.v.toFixed(2),`주간 ${chg(w)} · 4주 ${chg(m)}<br>기준 ${a.r.d}`))}
+    if(b.r){const w=pct(b.r.v,R.jeonG[b.i-1]?.v),m=pct(b.r.v,R.jeonG[b.i-4]?.v);
+      k.push(kpi('전세가격지수(관악)',b.r.v.toFixed(2),`주간 ${chg(w)} · 4주 ${chg(m)}<br>기준 ${b.r.d}`))}
+    const u=R.unsold.at(-1), v=R.vol.at(-1);
+    if(v) k.push(kpi('월 매매 거래량(R-ONE)',v.v.toLocaleString()+'호',`${v.ym.slice(0,4)}.${v.ym.slice(4)} 기준`));
+    if(u) k.push(kpi('미분양 주택',u.v.toLocaleString()+'호',`서울 ${R.unsoldSeoul.at(-1)?.v.toLocaleString()||'-'}호 · ${u.ym.slice(0,4)}.${u.ym.slice(4)}`));
+  }
+  $('#kpis').innerHTML=k.join('');
+}
+const kpi=(l,v,s)=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+
+/* ---------- charts ---------- */
+const CH={};
+function mk(id,cfg){CH[id]?.destroy();CH[id]=new Chart($('#'+id),cfg);}
+const baseOpt={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:10}}},scales:{x:{ticks:{maxTicksLimit:8,font:{size:11}},grid:{display:false}},y:{grid:{color:'#eef1f6'},ticks:{font:{size:11}}}}};
+function renderIndexChart(){
+  const R=S.rone; if(!R) return;
+  const n=+$('#lookback').value, end=S.end||ymd(new Date());
+  const cut=addDays(end,-n*7);
+  const monthly=S.mode==='month';
+  const pick=a=>{const x=a.filter(p=>p.d>=cut&&p.d<=end);if(!monthly)return x;const m={};x.forEach(p=>{(m[p.d.slice(0,7)]??=[]).push(p.v)});return Object.entries(m).map(([d,v])=>({d,v:avg(v)}))};
+  const sg=pick(R.saleG),ss=pick(R.saleS),jg=pick(R.jeonG),js=pick(R.jeonS);
+  $('#idxNote').textContent=monthly?'(월평균)':'(주간)';
+  mk('chIdx',{type:'line',data:{labels:sg.map(p=>p.d.slice(monthly?2:5)),datasets:[
+    {label:'매매 관악',data:sg.map(p=>p.v),borderColor:'#d83a3a',backgroundColor:'#d83a3a',pointRadius:0,borderWidth:2.5,tension:.25},
+    {label:'매매 서울',data:ss.map(p=>p.v),borderColor:'#d83a3a',borderDash:[5,4],pointRadius:0,borderWidth:1.5,tension:.25},
+    {label:'전세 관악',data:jg.map(p=>p.v),borderColor:'#0f8b8d',backgroundColor:'#0f8b8d',pointRadius:0,borderWidth:2.5,tension:.25},
+    {label:'전세 서울',data:js.map(p=>p.v),borderColor:'#0f8b8d',borderDash:[5,4],pointRadius:0,borderWidth:1.5,tension:.25}]},options:{...baseOpt,scales:{...baseOpt.scales,y:{...baseOpt.scales.y,ticks:{callback:v=>v.toFixed(1)}}}}});
+}
+function renderVolUnsold(){
+  const R=S.rone; if(!R) return;
+  mk('chVol',{type:'bar',data:{labels:R.vol.map(p=>p.ym.slice(2,4)+'.'+p.ym.slice(4)),datasets:[{label:'매매 거래량(호)',data:R.vol.map(p=>p.v),backgroundColor:'#1d4a8a',borderRadius:4}]},options:{...baseOpt,plugins:{legend:{display:false}}}});
+  mk('chUnsold',{data:{labels:R.unsold.map(p=>p.ym.slice(2,4)+'.'+p.ym.slice(4)),datasets:[
+    {type:'bar',label:'관악구 미분양(호)',data:R.unsold.map(p=>p.v),backgroundColor:'#e0a526',borderRadius:4,yAxisID:'y'},
+    {type:'line',label:'서울 미분양(호)',data:R.unsoldSeoul.map(p=>p.v),borderColor:'#6a7587',pointRadius:2,borderWidth:1.5,yAxisID:'y2'}]},
+    options:{...baseOpt,scales:{...baseOpt.scales,y2:{position:'right',grid:{display:false},ticks:{font:{size:11}}}}}});
+}
+function renderTrend(){
+  const T=cur('T'),J=cur('J'),M=cur('M');
+  const span=(new Date(S.end)-new Date(S.start))/864e5+1, byWeek=span>45;
+  const key=d=>{if(!byWeek)return d.date.slice(5);const dt=new Date(d.date+'T00:00:00');const day=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-day);return ymd(dt).slice(5)};
+  const labs=[...new Set([...T,...J,...M].map(key))].sort();
+  const cnt=a=>labs.map(l=>a.filter(d=>key(d)===l).length);
+  $('#trendNote').textContent=byWeek?'(주 단위 · 월요일 기준)':'(일 단위)';
+  mk('chTrend',{type:'bar',data:{labels:labs,datasets:[
+    {label:'매매',data:cnt(T),backgroundColor:'#d83a3a'},{label:'전세',data:cnt(J),backgroundColor:'#0f8b8d'},{label:'월세',data:cnt(M),backgroundColor:'#c77d12'}]},
+    options:{...baseOpt,scales:{x:{...baseOpt.scales.x,stacked:true},y:{...baseOpt.scales.y,stacked:true,ticks:{precision:0}}}}});
+  const bins=[['~5억',0,50000],['5~8억',50000,80000],['8~10억',80000,100000],['10~15억',100000,150000],['15억~',150000,1e9]];
+  mk('chPrice',{type:'bar',data:{labels:bins.map(b=>b[0]),datasets:[{label:'건수',data:bins.map(b=>T.filter(d=>d.price>=b[1]&&d.price<b[2]).length),backgroundColor:'#12305c',borderRadius:4}]},options:{...baseOpt,plugins:{legend:{display:false}}}});
+}
+
+/* ---------- dong table & apt list ---------- */
+function renderDongTable(){
+  const rows=DONGS.map(dn=>{
+    const f=k=>S.deals.filter(d=>d.k===k&&inRange(d)&&d.dong===dn);
+    const T=f('T'),J=f('J'),M=f('M');
+    return `<tr data-dong="${dn}" style="cursor:pointer;${S.dong===dn?'background:#fff7e0':''}"><td><b>${dn}</b></td><td class="r">${T.length}</td><td class="r">${J.length}</td><td class="r">${M.length}</td><td class="r">${T.length?won(avg(T.map(d=>d.price))):'-'}</td></tr>`;
+  }).join('');
+  $('#dongTable').innerHTML=`<table><thead><tr><th>동</th><th class="r">매매</th><th class="r">전세</th><th class="r">월세</th><th class="r">평균매매가</th></tr></thead><tbody>${rows}</tbody></table><div class="note" style="margin-top:6px">※ 실거래가 신고 기준 법정동(봉천동·신림동·남현동)으로 구분됩니다. 행 클릭으로 동 선택.</div>`;
+  $$('#dongTable tr[data-dong]').forEach(tr=>tr.onclick=()=>{S.dong=tr.dataset.dong;S.sel=null;buildDongChips();renderAll();});
+}
+function groups(kind,list){
+  const m=new Map();
+  list.filter(d=>d.k===kind).forEach(d=>{
+    const k=d.apt+'|'+d.dong; let g=m.get(k);
+    if(!g){g={apt:d.apt,dong:d.dong,by:d.by,n:0,v:[],rent:[],pp:[],last:d};m.set(k,g)}
+    g.n++; g.v.push(kind==='T'?d.price:d.deposit); if(kind==='M')g.rent.push(d.rent);
+    if(kind==='T')g.pp.push(d.price/pyeong(d.area));
+    if(d.date>g.last.date)g.last=d;
+  });
+  return [...m.values()].map(g=>({...g,avg:avg(g.v),max:Math.max(...g.v),avgRent:avg(g.rent),avgPP:avg(g.pp)}));
+}
+function renderAptList(){
+  const list=cur(),Tg=groups('T',list),Jg=groups('J',list),Mg=groups('M',list);
+  const all=new Map();
+  [[Tg,'T'],[Jg,'J'],[Mg,'M']].forEach(([gs,k])=>gs.forEach(g=>{const key=g.apt+'|'+g.dong;const o=all.get(key)||{apt:g.apt,dong:g.dong,by:g.by};o[k]=g;all.set(key,o)}));
+  let rows=[...all.values()].filter(o=>!S.aptQ||o.apt.includes(S.aptQ));
+  rows.sort((a,b)=>((b.T?.n||0)+(b.J?.n||0)+(b.M?.n||0))-((a.T?.n||0)+(a.J?.n||0)+(a.M?.n||0)));
+  $('#aptListTitle').textContent=(S.dong==='전체'?'관악구 전체':S.dong)+' 아파트 리스트 ('+rows.length+'개 단지)';
+  $('#aptList').innerHTML=`<table><thead><tr><th>단지명</th><th>동</th><th class="r">준공</th><th class="r">매매</th><th class="r">평균 매매가</th><th class="r">전세</th><th class="r">평균 전세</th><th class="r">월세</th></tr></thead><tbody>${rows.map(o=>`<tr><td><b>${esc(o.apt)}</b></td><td>${o.dong}</td><td class="r">${o.by||'-'}</td><td class="r">${o.T?.n||'-'}</td><td class="r">${o.T?won(o.T.avg):'-'}</td><td class="r">${o.J?.n||'-'}</td><td class="r">${o.J?won(o.J.avg):'-'}</td><td class="r">${o.M?.n||'-'}</td></tr>`).join('')||'<tr><td colspan=8 class="note">선택한 기간에 거래가 없습니다.</td></tr>'}</tbody></table>`;
+}
+
+/* ---------- Top10 + map ---------- */
+let MAP,LAYER;
+function initMap(){
+  MAP=L.map('map',{scrollWheelZoom:false}).setView(CENTER['전체'],14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MAP);
+  LAYER=L.layerGroup().addTo(MAP);
+}
+function hash(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return h}
+function fallbackPos(name,dong){const h=hash(name),c=CENTER[dong]||CENTER['전체'];return [c[0]+((h%100)/100-.5)*.008,c[1]+(((h>>8)%100)/100-.5)*.010]}
+async function geoOf(name,dong){
+  const k=name+'|'+dong; if(GEO[k]) return GEO[k];
+  let g={exact:false};
+  try{g=await jget(`/api/geo?name=${encodeURIComponent(name)}&dong=${encodeURIComponent(dong)}`,1);}catch(e){}
+  if(!g.exact||g.lat==null){const [la,ln]=fallbackPos(name,dong);g={lat:la,lng:ln,exact:false}}
+  return GEO[k]=g;
+}
+function renderTop(){
+  const list=cur();
+  let gs=groups(S.kind,list);
+  gs.sort(S.sort==='cnt'?(a,b)=>b.n-a.n||b.avg-a.avg:(a,b)=>b.avg-a.avg||b.n-a.n);
+  S.top=gs.slice(0,10);
+  $('#t10Title').textContent=(S.dong==='전체'?'관악구':S.dong)+' 아파트 Top10 · '+KIND[S.kind];
+  if(!S.top.length){$('#t10list').innerHTML='<div class="spin">선택한 기간에 거래가 없습니다. 기간을 넓혀 보세요.</div>';LAYER?.clearLayers();$('#detail').innerHTML='';return}
+  if(!S.sel||!S.top.find(g=>g.apt===S.sel.apt&&g.dong===S.sel.dong)) S.sel=S.top[0];
+  drawList(); drawMarkers(); showDetail();
+}
+function priceLine(g){
+  if(S.kind==='T')return `<b>${won(g.last.price)}</b><small>평균 ${won(g.avg)}</small>`;
+  if(S.kind==='J')return `<b>${won(g.last.deposit)}</b><small>평균 ${won(g.avg)}</small>`;
+  return `<b>${won(g.last.deposit)}/${g.last.rent}만</b><small>평균 ${won(g.avg)}/${Math.round(g.avgRent)}만</small>`;
+}
+function drawList(){
+  $('#t10list').innerHTML=S.top.map((g,i)=>`<div class="item ${S.sel===g?'sel':''}" data-i="${i}"><div class="rank">${i+1}</div>
+    <div><div class="nm">${esc(g.apt)}</div><div class="sub">${g.dong} · ${g.by||'-'}년 · ${S.sort==='cnt'?'':'거래 '}${g.n}건${S.kind==='T'?' · 평당 '+won(g.avgPP):''}</div></div>
+    <div class="pr">${priceLine(g)}</div></div>`).join('');
+  $$('#t10list .item').forEach(el=>el.onclick=()=>{S.sel=S.top[+el.dataset.i];drawList();drawMarkers(true);showDetail();analyze({name:S.sel.apt,dong:S.sel.dong});});
+}
+async function drawMarkers(onlySelect){
+  const run=++geoRun; LAYER.clearLayers();
+  const pts=[];
+  for(let i=0;i<S.top.length;i++){
+    const g=S.top[i]; const cached=GEO[g.apt+'|'+g.dong];
+    $('#status').textContent=cached?'':`위치 조회 중 ${i+1}/${S.top.length}…`;
+    const geo=await geoOf(g.apt,g.dong); if(run!==geoRun) return;
+    g.geo=geo; pts.push(g); plot(g,i);
+    if(i===0||g===S.sel){ if(g===S.sel) MAP.setView([geo.lat,geo.lng],15); }
+    if(!cached&&!onlySelect) fitAll(pts);
+  }
+  $('#status').textContent='실거래 '+S.deals.length.toLocaleString()+'건 로드';
+  fitAll(pts); const s=S.sel?.geo; if(s) MAP.panTo([s.lat,s.lng]);
+}
+function fitAll(pts){ if(pts.length>1) MAP.fitBounds(pts.map(g=>[g.geo.lat,g.geo.lng]),{padding:[40,40],maxZoom:15}); }
+function tagOf(g){
+  const l=g.last; return S.kind==='T'?won(l.price):S.kind==='J'?won(l.deposit):won(l.deposit)+'/'+l.rent;
+}
+function plot(g,i){
+  const sel=g===S.sel;
+  const icon=L.divIcon({className:'',html:`<div style="display:flex;flex-direction:column;align-items:center"><div class="pin ${sel?'sel':''} ${g.geo.exact?'':'approx'}">${i+1}</div>${sel?`<div class="pricetag">${esc(g.apt)} ${tagOf(g)}</div>`:''}</div>`,iconSize:[36,56],iconAnchor:[18,18]});
+  const m=L.marker([g.geo.lat,g.geo.lng],{icon,zIndexOffset:sel?1000:0}).addTo(LAYER);
+  m.bindPopup(`<b>${i+1}. ${esc(g.apt)}</b><br>${g.dong} · ${g.by||'-'}년<br>최근 실거래 <b>${tagOf(g)}</b> (${g.last.date}, ${g.last.area}㎡, ${g.last.floor}층)${g.geo.exact?'':'<br><span style="color:#9a5d00">※ 대략적 위치</span>'}`);
+  m.on('click',()=>{S.sel=g;drawList();drawMarkers(true);showDetail();analyze({name:g.apt,dong:g.dong});});
+  if(sel) m.openPopup();
+}
+function recentDeals(g,n=8){
+  return S.deals.filter(d=>d.k===S.kind&&d.apt===g.apt&&d.dong===g.dong).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,n);
+}
+function showDetail(){
+  const g=S.sel; if(!g){$('#detail').innerHTML='';return}
+  const rd=recentDeals(g);
+  const head=S.kind==='M'?'<th class="r">보증금</th><th class="r">월세</th>':`<th class="r">${S.kind==='T'?'거래가':'보증금'}</th>`;
+  $('#detail').innerHTML=`<h3>${esc(g.apt)} <span class="badge">${g.dong}</span> <span class="badge">${g.by||'-'}년 준공</span> ${g.geo&&!g.geo.exact?'<span class="badge warn">지도 위치 대략</span>':''}</h3>
+  <div class="note" style="margin-bottom:6px">최근 실거래 ${KIND[S.kind]} · 선택기간 ${g.n}건 · 최고 ${won(g.max)}</div>
+  <div class="scroll" style="max-height:230px"><table><thead><tr><th>계약일</th><th class="r">전용㎡</th><th class="r">층</th>${head}</tr></thead><tbody>${rd.map(d=>`<tr><td>${d.date}</td><td class="r">${d.area}</td><td class="r">${d.floor}</td>${S.kind==='M'?`<td class="r">${won(d.deposit)}</td><td class="r"><b>${d.rent}만</b></td>`:`<td class="r"><b>${won(S.kind==='T'?d.price:d.deposit)}</b></td>`}</tr>`).join('')}</tbody></table></div>`;
+}
+
+/* ---------- 추천매물 ---------- */
+const SAMPLES=[
+ {id:'s1',sample:1,apt:'관악드림타운',dong:'봉천동',type:'T',price:'128000',area:84.9,floor:12,memo:'서울대입구역 도보권 대단지, 학군 우수 (샘플)'},
+ {id:'s2',sample:1,apt:'힐스테이트뉴포레',dong:'신림동',type:'J',price:'52000',area:59,floor:9,memo:'신림선·2호선 더블 접근, 신축 (샘플)'},
+ {id:'s3',sample:1,apt:'벽산블루밍',dong:'신림동',type:'M',price:'20000/125',area:84,floor:19,memo:'조원동 생활권, 상가·학원 인접 (샘플)'},
+ {id:'s4',sample:1,apt:'e편한세상서울대입구',dong:'봉천동',type:'T',price:'135000',area:84.9,floor:15,memo:'샤로수길 상권 인접, 투자·실거주 겸용 (샘플)'}];
+function myList(){try{return JSON.parse(localStorage.getItem('gw_listings')||'[]')}catch(e){return[]}}
+let selListing=null;
+function priceTxt(l){if(l.type==='M'){const[a,b]=String(l.price).split('/');return `${won(+a)} / ${b||'-'}만`}return won(+String(l.price).replace(/,/g,''))}
+function renderListings(){
+  const all=[...SAMPLES,...myList()];
+  $('#listings').innerHTML=all.map(l=>`<div class="lst ${selListing===l.id?'sel':''}" data-id="${l.id}">
+    ${l.sample?'':'<button class="del" title="삭제" data-del="'+l.id+'">×</button>'}
+    <span class="tp ${l.type}">${KIND[l.type]}</span> ${l.sample?'<span class="badge">샘플</span>':'<span class="badge">내 매물</span>'}
+    <h4>${esc(l.apt)}</h4><div class="note">${l.dong} · 전용 ${l.area||'-'}㎡ · ${l.floor||'-'}층</div>
+    <div class="p">${priceTxt(l)}</div><div class="note">${esc(l.memo||'')}</div><div class="note" style="color:var(--navy2);margin-top:6px">▶ 클릭하여 입지분석 보기</div></div>`).join('')
+    +'<button class="add" id="addBtn">＋ 추천매물 추가</button>';
+  $$('.lst').forEach(el=>el.onclick=e=>{
+    if(e.target.dataset.del){const id=e.target.dataset.del;localStorage.setItem('gw_listings',JSON.stringify(myList().filter(x=>x.id!==id)));renderListings();return}
+    selListing=el.dataset.id;const l=all.find(x=>x.id===selListing);renderListings();analyze({name:l.apt,dong:l.dong,scroll:true});});
+  $('#addBtn').onclick=()=>$('#dlg').showModal();
+}
+$('#addForm').addEventListener('submit',e=>{
+  if(e.submitter?.value!=='ok') return;
+  const f=Object.fromEntries(new FormData(e.target));
+  const l={id:'u'+Date.now(),apt:f.apt.trim(),dong:f.dong,type:f.type,price:f.price.trim(),area:f.area,floor:f.floor,memo:f.memo};
+  localStorage.setItem('gw_listings',JSON.stringify([...myList(),l]));e.target.reset();renderListings();
+});
+
+/* ---------- 입지분석 ---------- */
+const KTX=[['서울역 (KTX·공항철도)',37.5547,126.9707],['용산역 (KTX·ITX)',37.5299,126.9648],['광명역 (KTX)',37.4162,126.8847],['수서역 (SRT)',37.4873,127.1018]];
+const HUBS=[['신림역 상권',37.4843,126.9296,'시장·먹자골목·대형마트'],['서울대입구역 상권(샤로수길)',37.4796,126.9528,'카페·식당·젊은 상권'],['사당역 상권',37.4765,126.9816,'환승 상권·백화점/마트'],['봉천역·봉천사거리',37.4824,126.9419,'생활 상권'],['낙성대역·인헌시장',37.4770,126.9637,'전통시장·생활 상권']];
+const SUB_FALLBACK=[['2호선 신대방역',37.4875,126.9132],['2호선·신림선 신림역',37.4843,126.9296],['2호선 봉천역',37.4824,126.9419],['2호선 서울대입구역',37.4813,126.9527],['2호선 낙성대역',37.4770,126.9637],['2호선·4호선 사당역',37.4765,126.9816]];
+const GOV_FALLBACK=[['관악구청',37.4784,126.9516],['서울대학교',37.4599,126.9519],['보라매병원',37.4928,126.9249]];
+const DEV={
+ '공통':[['신림선 경전철','2022년 개통 · 신림~샛강(여의도) 연결로 서울 서남권 도심 접근성 개선'],['서부선 경전철(서울대입구~새절)','추진 중 · 개통 시 서울대입구·봉천 일대 교통 개선 기대'],['난곡선 경전철','추진 중 · 신림동 난곡·난향 일대 대중교통 보완 계획'],['관악 S밸리(신림창업밸리)','서울대 인접 벤처·창업 클러스터 조성 · 청년 일자리·상권 활성화']],
+ '봉천동':[['봉천동 일대 재개발·모아타운','노후 저층주거지 정비 · 구역별 사업 단계 상이'],['서울대입구역 역세권','샤로수길 상권 및 청년 주거 수요 집중']],
+ '신림동':[['신림동 재개발·신속통합기획','신림 일대 정비구역 다수 추진 · 구역별 단계 상이'],['신림역 일대 상권 정비','신림선 개통 이후 유동인구·상권 변화']],
+ '남현동':[['남현동·사당 생활권 정비','사당역 환승 접근성 · 일대 노후주거지 정비 논의'],['예술인마을·남현 문화시설','생활 SOC 및 도시재생 사업']]};
+let AMAP,ALAYER,locRun=0;
+async function analyze({name,dong,scroll}){
+  const run=++locRun;
+  if(scroll!==false) $('#locSec').scrollIntoView({behavior:'smooth',block:'start'});
+  $('#locBody').innerHTML=`<div class="card spin">📍 ${esc(name)} 주변 입지 정보를 불러오는 중… (최대 40초)</div>`;
+  const g=await geoOf(name,dong); if(run!==locRun) return;
+  let poi=null;
+  try{const j=await jget(`/api/poi?lat=${g.lat}&lng=${g.lng}`,1);if(j.ok)poi=j.items}catch(e){}
+  if(run!==locRun) return;
+  renderLoc(name,dong,g,poi);
+}
+const near=(items,g,n,filter=()=>true,keyFn=x=>x.name)=>{
+  const seen=new Map();
+  items.filter(filter).forEach(x=>{x.d=dist(g.lat,g.lng,x.lat,x.lng);const k=keyFn(x);if(!seen.has(k)||seen.get(k).d>x.d)seen.set(k,x)});
+  return [...seen.values()].sort((a,b)=>a.d-b.d).slice(0,n);
+};
+const li=(n,r)=>`<li><span>${esc(n)}</span><span>${r}</span></li>`;
+function renderLoc(name,dong,g,poi){
+  const P=poi||[];
+  const live=!!poi;
+  const lines=[];
+  // 교통
+  let sub=near(P,g,5,x=>x.cat==='station',x=>x.name.replace(/\s/g,''));
+  if(!sub.length) sub=near(SUB_FALLBACK.map(s=>({name:s[0],lat:s[1],lng:s[2]})),g,3);
+  const bus=near(P,g,7,x=>x.cat==='bus');
+  const busN=new Set(P.filter(x=>x.cat==='bus'&&dist(g.lat,g.lng,x.lat,x.lng)<=500).map(x=>x.name)).size;
+  const ktx=KTX.map(k=>({n:k[0],d:dist(g.lat,g.lng,k[1],k[2])})).sort((a,b)=>a.d-b.d);
+  const trans=`<h3>🚇 교통</h3><h4>지하철</h4><ul>${sub.map(s=>li(s.name,`${dtxt(s.d)} · ${walk(s.d)}`)).join('')||'<li class="note">정보 없음</li>'}</ul>
+   <h4>KTX·고속철 (직선거리)</h4><ul>${ktx.map(k=>li(k.n,dtxt(k.d))).join('')}</ul>
+   <h4>버스 (반경 500m 정류장 ${live?busN+'곳':'-'})</h4><ul>${live?(bus.map(b=>li(b.name,dtxt(b.d))).join('')||'<li class="note">정보 없음</li>'):'<li class="note">실시간 지도 DB 연결 실패 — 서울 TOPIS에서 확인</li>'}</ul>`;
+  // 학군
+  const sch=P.filter(x=>x.cat==='school');
+  const lv=(re)=>near(sch,g,3,x=>re.test(x.name));
+  const sc=live?`<h3>🎓 학군</h3><h4>초등학교</h4><ul>${lv(/초등|초$/).map(s=>li(s.name,`${dtxt(s.d)} · ${walk(s.d)}`)).join('')||'<li class="note">1.5km 내 정보 없음</li>'}</ul>
+   <h4>중학교</h4><ul>${lv(/중학|중$/).map(s=>li(s.name,dtxt(s.d))).join('')||'<li class="note">1.5km 내 정보 없음</li>'}</ul>
+   <h4>고등학교</h4><ul>${lv(/고등|고$/).map(s=>li(s.name,dtxt(s.d))).join('')||'<li class="note">1.5km 내 정보 없음</li>'}</ul><div class="note" style="margin-top:6px">실제 학교 배정은 관할 교육지원청의 학군·통학구역 기준으로 확인하세요.</div>`
+   :`<h3>🎓 학군</h3><div class="note">학교 정보를 불러오지 못했습니다. 아래 '다시 조회'를 눌러 주세요.</div>`;
+  // 상권
+  const shops=near(P,g,4,x=>x.cat==='shop'&&/department|mall/.test(x.shop)||/백화점|몰$/.test(x.name));
+  const marts=near(P,g,4,x=>x.cat==='shop'&&/supermarket/.test(x.shop)&&!/백화점/.test(x.name));
+  const cafes=near(P,g,5,x=>x.cat==='cafe',x=>x.name+Math.round(x.lat*1e3)+Math.round(x.lng*1e3));
+  const gov=near(P,g,4,x=>x.cat==='gov');
+  const hosp=near(P,g,2,x=>x.cat==='hospital');
+  const hubs=HUBS.map(h=>({n:h[0],d:dist(g.lat,g.lng,h[1],h[2]),t:h[3]})).sort((a,b)=>a.d-b.d).slice(0,3);
+  const biz=`<h3>🛍 상권</h3>
+   ${live?`<h4>백화점·쇼핑몰</h4><ul>${shops.map(s=>li(s.name,dtxt(s.d))).join('')||'<li class="note">1.8km 내 정보 없음</li>'}</ul>
+   <h4>마트</h4><ul>${marts.map(s=>li(s.name,dtxt(s.d))).join('')||'<li class="note">정보 없음</li>'}</ul>
+   <h4>커피숍</h4><ul>${cafes.map(s=>li(s.name,dtxt(s.d))).join('')||'<li class="note">정보 없음</li>'}</ul>
+   <h4>관공서·병원</h4><ul>${gov.concat(hosp).map(s=>li(s.name,dtxt(s.d))).join('')||'<li class="note">정보 없음</li>'}</ul>`
+   :`<h4>관공서·주요시설</h4><ul>${GOV_FALLBACK.map(x=>({n:x[0],d:dist(g.lat,g.lng,x[1],x[2])})).sort((a,b)=>a.d-b.d).map(x=>li(x.n,dtxt(x.d))).join('')}</ul>`}
+   <h4>인근 주요 상권</h4><ul>${hubs.map(h=>`<li class="pl"><span><b>${h.n}</b> · ${dtxt(h.d)}</span><span>${h.t}</span></li>`).join('')}</ul>`;
+  // 개발
+  const dv=[...(DEV[dong]||[]),...DEV['공통']];
+  const dev=`<h3>🏗 주변 개발계획</h3><ul>${dv.map(d=>`<li class="pl"><span><b>${d[0]}</b></span><span>${d[1]}</span></li>`).join('')}</ul><div class="note" style="margin-top:6px">※ 서울시·관악구 공개 계획 요약이며 사업 단계·일정은 변동될 수 있습니다. 상담 시 최신 고시를 확인해 드립니다.</div>`;
+  const recent=S.deals.filter(d=>d.apt===name&&d.dong===dong).sort((a,b)=>b.date.localeCompare(a.date));
+  const rt=recent.find(d=>d.k==='T'),rj=recent.find(d=>d.k==='J'),rm=recent.find(d=>d.k==='M');
+  $('#locBody').innerHTML=`<div class="card" style="margin-bottom:14px"><div class="locHead"><span class="nm">📍 ${esc(name)}</span><span class="badge">${dong}</span>${g.exact?'':'<span class="badge warn">위치 대략</span>'}${live?'':'<span class="badge warn">지도 DB 응답 지연 · 기본 정보 표시</span>'}
+    ${rt?`<span>최근 매매 <b>${won(rt.price)}</b> (${rt.date}, ${rt.area}㎡)</span>`:''}${rj?`<span>최근 전세 <b>${won(rj.deposit)}</b></span>`:''}${rm?`<span>최근 월세 <b>${won(rm.deposit)}/${rm.rent}만</b></span>`:''}
+    ${live?'':'<button class="btn ghost" id="retryLoc">다시 조회</button>'}</div>
+    <div id="amap"></div></div>
+    <div class="loc"><div class="blk">${trans}</div><div class="blk">${sc}</div><div class="blk">${biz}</div><div class="blk">${dev}</div></div>`;
+  if($('#retryLoc')) $('#retryLoc').onclick=()=>analyze({name,dong,scroll:false});
+  AMAP?.remove();
+  AMAP=L.map('amap',{scrollWheelZoom:false}).setView([g.lat,g.lng],15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(AMAP);
+  const col={station:'#12305c',school:'#2f9e44',shop:'#d83a3a',cafe:'#8a5a2b',gov:'#7a3db8',hospital:'#c2255c'};
+  L.circle([g.lat,g.lng],{radius:500,color:'#e0a526',weight:1,fillOpacity:.05}).addTo(AMAP);
+  L.circle([g.lat,g.lng],{radius:1000,color:'#e0a526',weight:1,dash:'4',fillOpacity:0}).addTo(AMAP);
+  [...near(P,g,5,x=>x.cat==='station',x=>x.name),...near(sch,g,9),...shops,...marts,...cafes,...gov].forEach(p=>
+    L.circleMarker([p.lat,p.lng],{radius:6,color:'#fff',weight:1.5,fillColor:col[p.cat]||'#555',fillOpacity:1}).addTo(AMAP).bindTooltip(p.name));
+  L.marker([g.lat,g.lng],{icon:L.divIcon({className:'',html:'<div class="pin sel">★</div>',iconSize:[36,36],iconAnchor:[18,18]})}).addTo(AMAP).bindTooltip(name,{permanent:true,direction:'top',offset:[0,-16]});
+}
+
+/* ---------- boot ---------- */
+function renderAll(){
+  $('#scopeTitle').textContent=S.dong==='전체'?'관악구 전체':S.dong;
+  $('#rangeLabel').textContent=`${S.start} ~ ${S.end}`;
+  $('#dongListTitle').textContent=S.dong==='전체'?'동별 현황':S.dong+' 현황';
+  renderKpis();renderTrend();renderDongTable();renderAptList();renderTop();renderIndexChart();
+  if(S.top[0]&&!selListing&&!renderAll.once){renderAll.once=1;analyze({name:S.top[0].apt,dong:S.top[0].dong,scroll:false})}
+}
+(async function init(){
+  if(STATIC){try{window.SNAP=(await (await fetch('data/meta.json')).json()).updated}catch(e){}}
+  const today=new Date();$('#dEnd').value=ymd(today);setMode('month');
+  buildDongChips();initMap();renderListings();loadRone();reload();
+})();
+</script>
+</body>
+</html>
