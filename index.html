@@ -473,7 +473,7 @@ function drawList(){
   $('#t10list').innerHTML=S.top.map((g,i)=>`<div class="item ${S.sel===g?'sel':''}" data-i="${i}"><div class="rank">${i+1}</div>
     <div><div class="nm">${esc(g.apt)}</div><div class="sub">${g.dong} · ${g.by||'-'}년 · ${S.sort==='cnt'?'':'거래 '}${g.n}건${S.kind==='T'?' · 평당 '+won(g.avgPP):''}</div></div>
     <div class="pr">${priceLine(g)}</div></div>`).join('');
-  $$('#t10list .item').forEach(el=>el.onclick=()=>{S.sel=S.top[+el.dataset.i];drawList();drawMarkers(true);showDetail();analyze({name:S.sel.apt,dong:S.sel.dong});});
+  $$('#t10list .item').forEach(el=>el.onclick=()=>{S.sel=S.top[+el.dataset.i];drawList();drawMarkers(true);showDetail();analyze({name:S.sel.apt,dong:S.sel.dong,scroll:false});});
 }
 async function drawMarkers(onlySelect){
   const run=++geoRun; LAYER.clearLayers();
@@ -483,11 +483,12 @@ async function drawMarkers(onlySelect){
     $('#status').textContent=cached?'':`위치 조회 중 ${i+1}/${S.top.length}…`;
     const geo=await geoOf(g.apt,g.dong); if(run!==geoRun) return;
     g.geo=geo; pts.push(g); plot(g,i);
-    if(i===0||g===S.sel){ if(g===S.sel) MAP.setView([geo.lat,geo.lng],15); }
+    if(g===S.sel) MAP.setView([geo.lat,geo.lng],onlySelect?16:15);
     if(!cached&&!onlySelect) fitAll(pts);
   }
   $('#status').textContent='실거래 '+S.deals.length.toLocaleString()+'건 로드';
-  fitAll(pts); const s=S.sel?.geo; if(s) MAP.panTo([s.lat,s.lng]);
+  const s=S.sel?.geo;
+  if(onlySelect&&s) MAP.setView([s.lat,s.lng],16); else {fitAll(pts); if(s) MAP.panTo([s.lat,s.lng]);}
 }
 function fitAll(pts){ if(pts.length>1) MAP.fitBounds(pts.map(g=>[g.geo.lat,g.geo.lng]),{padding:[40,40],maxZoom:15}); }
 function tagOf(g){
@@ -498,7 +499,7 @@ function plot(g,i){
   const icon=L.divIcon({className:'',html:`<div style="display:flex;flex-direction:column;align-items:center"><div class="pin ${sel?'sel':''} ${g.geo.exact?'':'approx'}">${i+1}</div>${sel?`<div class="pricetag">${esc(g.apt)} ${tagOf(g)}</div>`:''}</div>`,iconSize:[36,56],iconAnchor:[18,18]});
   const m=L.marker([g.geo.lat,g.geo.lng],{icon,zIndexOffset:sel?1000:0}).addTo(LAYER);
   m.bindPopup(`<b>${i+1}. ${esc(g.apt)}</b><br>${g.dong} · ${g.by||'-'}년<br>최근 실거래 <b>${tagOf(g)}</b> (${g.last.date}, ${g.last.area}㎡, ${g.last.floor}층)${g.geo.exact?'':'<br><span style="color:#9a5d00">※ 대략적 위치</span>'}`);
-  m.on('click',()=>{S.sel=g;drawList();drawMarkers(true);showDetail();analyze({name:g.apt,dong:g.dong});});
+  m.on('click',()=>{S.sel=g;drawList();drawMarkers(true);showDetail();analyze({name:g.apt,dong:g.dong,scroll:false});});
   if(sel) m.openPopup();
 }
 function recentDeals(g,n=8){
