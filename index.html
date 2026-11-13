@@ -133,7 +133,7 @@ footer b{color:#fff}
 </div></header>
 
 <div class="controls"><div class="wrap">
-  <div class="grp"><label>지역</label><span id="dongChips"></span></div>
+  <div class="grp"><label>지역</label><button class="chip on" data-dmode="h">행정동</button><button class="chip" data-dmode="b">법정동</button><select id="dongSel" title="동 선택" style="min-width:130px"></select></div>
   <div class="grp"><label>기간</label>
     <button class="chip" data-mode="week">주간</button>
     <button class="chip on" data-mode="month">월간</button>
@@ -226,9 +226,11 @@ function vworldLayer(){
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const DONGS=['봉천동','신림동','남현동'];
+const HDONGS=['낙성대동','난곡동','난향동','남현동','대학동','미성동','보라매동','삼성동','서림동','서원동','성현동','신림동','신사동','신원동','은천동','인헌동','조원동','중앙동','청룡동','청림동','행운동'];
+let GEOMAP={};
 const CENTER={'봉천동':[37.4795,126.9530],'신림동':[37.4840,126.9290],'남현동':[37.4745,126.9790],'전체':[37.4784,126.9516]};
 const KIND={T:'매매',J:'전세',M:'월세'};
-const S={dong:'전체',mode:'month',start:'',end:'',kind:'T',sort:'cnt',sel:null,deals:[],rone:null,loadedKey:'',top:[],aptQ:''};
+const S={dmode:'h',dong:'전체',mode:'month',start:'',end:'',kind:'T',sort:'cnt',sel:null,deals:[],rone:null,loadedKey:'',top:[],aptQ:''};
 const GEO={}; let geoRun=0;
 
 /* ---------- format ---------- */
@@ -250,8 +252,11 @@ const dtxt=m=>m<1000?Math.round(m/10)*10+'m':(m/1000).toFixed(1)+'km';
 const walk=m=>'도보 약 '+Math.max(1,Math.round(m*1.3/75))+'분';
 
 /* ---------- controls ---------- */
+const dongList=()=>S.dmode==='h'?HDONGS:DONGS;
+const dongOf=d=>S.dmode==='h'?d.hdong:d.dong;
 function buildDongChips(){
-  $('#dongChips').innerHTML=['전체',...DONGS].map(d=>`<button class="chip ${S.dong===d?'on':''}" data-dong="${d}">${d==='전체'?'관악구 전체':d}</button>`).join(' ');
+  $$('[data-dmode]').forEach(b=>b.classList.toggle('on',b.dataset.dmode===S.dmode));
+  $('#dongSel').innerHTML=['전체',...dongList()].map(d=>`<option value="${d}" ${S.dong===d?'selected':''}>${d==='전체'?'관악구 전체':d+(S.dmode==='h'?' (행정동)':' (법정동)')}</option>`).join('');
 }
 function setMode(m){
   S.mode=m; $$('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
@@ -260,7 +265,8 @@ function setMode(m){
 }
 document.addEventListener('click',e=>{
   const c=e.target.closest('button'); if(!c) return;
-  if(c.dataset.dong){S.dong=c.dataset.dong;S.sel=null;buildDongChips();renderAll();}
+  if(c.dataset.dmode){S.dmode=c.dataset.dmode;S.dong='전체';S.sel=null;buildDongChips();renderAll();}
+  else if(c.dataset.dong){S.dong=c.dataset.dong;S.sel=null;buildDongChips();renderAll();}
   else if(c.dataset.mode){setMode(c.dataset.mode);if(c.dataset.mode!=='custom')reload();}
   else if(c.id==='apply'){S.mode='custom';$$('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode==='custom'));reload();}
   else if(c.classList.contains('tab')){S.kind=c.dataset.k;S.sel=null;$$('.tab').forEach(t=>t.classList.toggle('on',t===c));renderTop();}
@@ -269,6 +275,7 @@ document.addEventListener('click',e=>{
 ['dStart','dEnd'].forEach(id=>$('#'+id).addEventListener('change',()=>{
   if(id==='dEnd'&&S.mode!=='custom') setMode(S.mode);
 }));
+$('#dongSel').addEventListener('change',e=>{S.dong=e.target.value;S.sel=null;renderAll();});
 $('#lookback').addEventListener('change',renderIndexChart);
 $('#aptQ').addEventListener('input',e=>{S.aptQ=e.target.value.trim();renderAptList();});
 
@@ -284,7 +291,7 @@ async function reload(){
   try{
     if(S.loadedKey!==key){
       const j=await jget(`/api/deals?from=${from}&to=${to}`);
-      S.deals=j.deals.filter(d=>d.area>=20); S.loadedKey=key;
+      S.deals=j.deals.filter(d=>d.area>=20); S.deals.forEach(d=>{const h=(GEOMAP[d.apt+'|'+d.dong]||{}).hdong;d.hdong=HDONGS.includes(h)?h:''}); S.loadedKey=key;
     }
     showErr('');
     $('#status').textContent='실거래 '+S.deals.length.toLocaleString()+'건 로드'+(STATIC?' · 데이터 기준일 '+(window.SNAP||''):' · 최종 갱신 '+new Date().toLocaleTimeString('ko-KR'));
@@ -340,7 +347,7 @@ async function jget(url,tries=4){
   throw new Error(location.protocol==='file:'?'서버 주소(http://localhost:8787)로 접속해 주세요':'서버 연결 실패 - 터미널에서 node server.js 실행 여부를 확인하세요 ('+(last&&last.message)+')');
 }
 const inRange=d=>d.date>=S.start&&d.date<=S.end;
-const inDong=d=>S.dong==='전체'||d.dong===S.dong;
+const inDong=d=>S.dong==='전체'||dongOf(d)===S.dong;
 const cur=(k)=>S.deals.filter(d=>(k?d.k===k:true)&&inRange(d)&&inDong(d));
 
 /* ---------- KPI ---------- */
@@ -413,12 +420,12 @@ function renderTrend(){
 
 /* ---------- dong table & apt list ---------- */
 function renderDongTable(){
-  const rows=DONGS.map(dn=>{
-    const f=k=>S.deals.filter(d=>d.k===k&&inRange(d)&&d.dong===dn);
+  const rows=dongList().map(dn=>{
+    const f=k=>S.deals.filter(d=>d.k===k&&inRange(d)&&dongOf(d)===dn);
     const T=f('T'),J=f('J'),M=f('M');
     return `<tr data-dong="${dn}" style="cursor:pointer;${S.dong===dn?'background:#fff7e0':''}"><td><b>${dn}</b></td><td class="r">${T.length}</td><td class="r">${J.length}</td><td class="r">${M.length}</td><td class="r">${T.length?won(avg(T.map(d=>d.price))):'-'}</td></tr>`;
   }).join('');
-  $('#dongTable').innerHTML=`<table><thead><tr><th>동</th><th class="r">매매</th><th class="r">전세</th><th class="r">월세</th><th class="r">평균매매가</th></tr></thead><tbody>${rows}</tbody></table><div class="note" style="margin-top:6px">※ 실거래가 신고 기준 법정동(봉천동·신림동·남현동)으로 구분됩니다. 행 클릭으로 동 선택.</div>`;
+  $('#dongTable').innerHTML=`<table><thead><tr><th>동</th><th class="r">매매</th><th class="r">전세</th><th class="r">월세</th><th class="r">평균매매가</th></tr></thead><tbody>${rows}</tbody></table><div class="note" style="margin-top:6px">※ ${S.dmode==='h'?'행정동(21개)':'법정동(3개)'} 기준입니다. 행정동은 단지 좌표로 판별하며 위치 미확인 단지는 '관악구 전체'에만 포함됩니다. 행 클릭으로 동 선택.</div>`;
   $$('#dongTable tr[data-dong]').forEach(tr=>tr.onclick=()=>{S.dong=tr.dataset.dong;S.sel=null;buildDongChips();renderAll();});
 }
 function groups(kind,list){
@@ -642,6 +649,7 @@ function renderAll(){
 (async function init(){
   if(STATIC){try{window.SNAP=(await (await fetch('data/meta.json')).json()).updated}catch(e){}}
   const today=new Date();$('#dEnd').value=ymd(today);setMode('month');
+  try{GEOMAP=await (await fetch('data/geo.json',{cache:'no-store'})).json();Object.entries(GEOMAP).forEach(([k,v])=>{if(v&&v.lat)GEO[k]={lat:v.lat,lng:v.lng,exact:true}})}catch(e){}
   buildDongChips();initMap();renderListings();loadRone();reload();
 })();
 </script>
