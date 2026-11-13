@@ -454,7 +454,8 @@ function fallbackPos(name,dong){const h=hash(name),c=CENTER[dong]||CENTER['ì „ì²
 async function geoOf(name,dong){
   const k=name+'|'+dong; if(GEO[k]) return GEO[k];
   let g={exact:false};
-  try{g=await jget(`/api/geo?name=${encodeURIComponent(name)}&dong=${encodeURIComponent(dong)}`,1);}catch(e){}
+  const jb=(S.deals.find(d=>d.apt===name&&d.dong===dong)||{}).jibun||'';
+  try{g=await jget(`/api/geo?name=${encodeURIComponent(name)}&dong=${encodeURIComponent(dong)}&jibun=${encodeURIComponent(jb)}`,1);}catch(e){}
   if(!g.exact||g.lat==null){const [la,ln]=fallbackPos(name,dong);g={lat:la,lng:ln,exact:false}}
   return GEO[k]=g;
 }

@@ -18,14 +18,15 @@ const get = async (u) => { const r = await fetch(BASE + u, { signal: AbortSignal
   // 지도 좌표 미리 조회 (최근 4개월 거래 2건 이상 단지)
   const cnt = {};
   recent.filter((d) => d.area >= 20).forEach((d) => { const k = d.apt + '|' + d.dong; cnt[k] = (cnt[k] || 0) + 1; });
-  const keys = Object.keys(cnt).filter((k) => cnt[k] >= 2).sort((a, b) => cnt[b] - cnt[a]);
+  const jb = {}; recent.forEach((d) => { jb[d.apt + '|' + d.dong] = d.jibun; });
+  const keys = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]);
   console.log('geocoding', keys.length);
   const geo = {};
   try { Object.assign(geo, JSON.parse(fs.readFileSync(path.join(OUT, 'geo.json'), 'utf8'))); } catch (e) {}
   for (const k of keys) {
-    if (geo[k]) continue;
+    if (geo[k] && geo[k].src === 'vw') continue;
     const [name, dong] = k.split('|');
-    try { const g = await get(`/api/geo?name=${encodeURIComponent(name)}&dong=${encodeURIComponent(dong)}`); if (g.exact) geo[k] = g; } catch (e) {}
+    try { const g = await get(`/api/geo?name=${encodeURIComponent(name)}&dong=${encodeURIComponent(dong)}&jibun=${encodeURIComponent(jb[k] || '')}`); if (g.exact) geo[k] = g; } catch (e) {}
     fs.writeFileSync(path.join(OUT, 'geo.json'), JSON.stringify(geo));
   }
   fs.writeFileSync(path.join(OUT, 'meta.json'), JSON.stringify({ updated: new Date().toISOString().slice(0, 10) }));

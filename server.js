@@ -10,6 +10,7 @@ try { // .env 파일(깃에 올라가지 않음)에서 API 키 로드
 } catch (e) { /* no .env */ }
 const DATA_KEY = process.env.DATA_GO_KR_KEY;
 const REB_KEY = process.env.REB_KEY;
+const VWORLD_KEY = process.env.VWORLD_KEY;
 if (!DATA_KEY || !REB_KEY) { console.error('.env 파일에 DATA_GO_KR_KEY, REB_KEY 를 설정하세요 (.env.example 참고)'); process.exit(1); }
 const PORT = process.env.PORT || 8787;
 const LAWD = '11620'; // 서울 관악구
@@ -151,8 +152,31 @@ let geo = {};
 try { geo = JSON.parse(fs.readFileSync(GEO_FILE, 'utf8')); } catch (e) { /* none */ }
 let geoQueue = Promise.resolve();
 const geoMiss = new Set();
-function geocode(name, dong) {
+async function vworldGeo(dong, jibun) {
+  if (!VWORLD_KEY || !jibun) return null;
+  const u = `https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&type=parcel&format=json&key=${VWORLD_KEY}&address=${encodeURIComponent(`서울특별시 관악구 ${dong} ${jibun}`)}`;
+  try {
+    const j = JSON.parse(await getText(u, { headers: { Referer: 'http://localhost:8787/' } }, 2));
+    const r = j.response;
+    if (r && r.status === 'OK' && r.result && r.result.point) {
+      return { lat: +r.result.point.y, lng: +r.result.point.x, exact: true, src: 'vw', hdong: (r.refined && r.refined.structure && r.refined.structure.level4A) || '' };
+    }
+  } catch (e) { /* fall through */ }
+  return null;
+}
+function geocode(name, dong, jibun) {
   const key = `${name}|${dong}`;
+  if (geo[key] && (geo[key].src === 'vw' || !jibun)) return Promise.resolve(geo[key]);
+  if (jibun) {
+    const p = vworldGeo(dong, jibun).then((g) => {
+      if (g) { geo[key] = g; try { fs.writeFileSync(GEO_FILE, JSON.stringify(geo)); } catch (e) { /* ignore */ } return g; }
+      return geo[key] ? geo[key] : geocodeOsm(name, dong, key);
+    });
+    return p;
+  }
+  return geocodeOsm(name, dong, key);
+}
+function geocodeOsm(name, dong, key) {
   if (geo[key]) return Promise.resolve(geo[key]);
   if (geoMiss.has(key)) return Promise.resolve({ lat: null, lng: null, exact: false });
   const job = geoQueue.then(async () => {
@@ -243,7 +267,7 @@ const srv = http.createServer(async (req, res) => {
     }
     if (u.pathname === '/api/rone') return send(res, 200, await roneAll());
     if (u.pathname === '/api/geo') {
-      const g = await geocode(u.searchParams.get('name') || '', u.searchParams.get('dong') || '');
+      const g = await geocode(u.searchParams.get('name') || '', u.searchParams.get('dong') || '', u.searchParams.get('jibun') || '');
       return send(res, 200, g);
     }
     if (u.pathname === '/api/poi') {
