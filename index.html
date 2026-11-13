@@ -201,7 +201,7 @@ footer b{color:#fff}
 
 <footer><div class="wrap">
   <b>한걸음부동산</b> · 서울 관악구 전문 공인중개사 · Tel. 000-XXXX-XXXX<br>
-  자료: 국토교통부 아파트 매매·전월세 실거래가(공공데이터포털), 한국부동산원 R-ONE 부동산통계, 지도 © OpenStreetMap contributors. 입지 정보는 OpenStreetMap 기반이며 거리는 직선거리 기준(도보 시간은 추정)입니다.<br>
+  자료: 국토교통부 아파트 매매·전월세 실거래가(공공데이터포털), 한국부동산원 R-ONE 부동산통계, 지도 © 브이월드(국토교통부). 입지 정보(학교·상권 등)는 OpenStreetMap 기반이며 거리는 직선거리 기준(도보 시간은 추정)입니다.<br>
   실거래가는 계약 후 30일 이내 신고 기준으로 최근 거래는 추후 반영될 수 있습니다. 본 자료는 참고용이며 투자 결정의 근거가 될 수 없고, 추천매물은 샘플입니다.
 </div></footer>
 
@@ -219,6 +219,10 @@ footer b{color:#fff}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
+const VWORLD_KEY='4040773F-AAB3-4B69-B657-451A689C11D4'; // 브이월드 인증키 (도메인 제한 키)
+function vworldLayer(){
+  return L.tileLayer(`https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{z}/{y}/{x}.png`,{minZoom:6,maxZoom:18,attribution:'© <a href="https://www.vworld.kr" target="_blank">VWorld</a> 국토교통부'});
+}
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const DONGS=['봉천동','신림동','남현동'];
@@ -442,7 +446,7 @@ function renderAptList(){
 let MAP,LAYER;
 function initMap(){
   MAP=L.map('map',{scrollWheelZoom:false}).setView(CENTER['전체'],14);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MAP);
+  vworldLayer().addTo(MAP);
   LAYER=L.layerGroup().addTo(MAP);
 }
 function hash(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return h}
@@ -617,7 +621,7 @@ function renderLoc(name,dong,g,poi){
   if($('#retryLoc')) $('#retryLoc').onclick=()=>analyze({name,dong,scroll:false});
   AMAP?.remove();
   AMAP=L.map('amap',{scrollWheelZoom:false}).setView([g.lat,g.lng],15);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(AMAP);
+  vworldLayer().addTo(AMAP);
   const col={station:'#12305c',school:'#2f9e44',shop:'#d83a3a',cafe:'#8a5a2b',gov:'#7a3db8',hospital:'#c2255c'};
   L.circle([g.lat,g.lng],{radius:500,color:'#e0a526',weight:1,fillOpacity:.05}).addTo(AMAP);
   L.circle([g.lat,g.lng],{radius:1000,color:'#e0a526',weight:1,dash:'4',fillOpacity:0}).addTo(AMAP);
