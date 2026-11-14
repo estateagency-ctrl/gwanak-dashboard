@@ -248,8 +248,11 @@ footer b{color:#fff}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 const VWORLD_KEY='4040773F-AAB3-4B69-B657-451A689C11D4'; // 브이월드 인증키 (도메인 제한 키)
+let TILE_PENDING=0;
 function vworldLayer(){
-  return L.tileLayer(`https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{z}/{y}/{x}.png`,{minZoom:6,maxZoom:18,attribution:'© <a href="https://www.vworld.kr" target="_blank">VWorld</a> 국토교통부'});
+  const t=L.tileLayer(`https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{z}/{y}/{x}.png`,{minZoom:6,maxZoom:18,attribution:'© <a href="https://www.vworld.kr" target="_blank">VWorld</a> 국토교통부'});
+  t.on('tileloadstart',()=>TILE_PENDING++);t.on('tileload tileerror',()=>TILE_PENDING=Math.max(0,TILE_PENDING-1));
+  return t;
 }
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -676,14 +679,15 @@ window.addEventListener('beforeprint',printPrep);
 window.addEventListener('afterprint',()=>{Object.values(CH).forEach(c=>c&&c.resize());try{MAP&&MAP.invalidateSize();AMAP&&AMAP.invalidateSize();}catch(e){}});
 const IN_APP=/Claude\//.test(navigator.userAgent); // Claude 앱 내장 브라우저는 인쇄창을 지원하지 않음
 $('#printBtn').addEventListener('click',()=>{
+  const b=$('#printBtn');
   if(IN_APP){
-    if(confirm('이 화면(앱 내장 브라우저)은 인쇄창을 지원하지 않습니다.\n기본 브라우저(Chrome/Safari)에서 같은 화면을 열어 인쇄할까요?')){
-      const u=new URL(location.href);u.searchParams.set('autoprint','1');u.searchParams.set('d',S.dong);u.searchParams.set('m',S.dmode);u.searchParams.set('s',S.start);u.searchParams.set('e',S.end);
-      window.open(u.toString(),'_blank');
-    }
+    b.textContent='⏳ 인쇄 화면 여는 중…';setTimeout(()=>b.textContent='🖨 인쇄',3000);
+    const u=new URL(location.href);u.searchParams.set('autoprint','1');u.searchParams.set('d',S.dong);u.searchParams.set('m',S.dmode);u.searchParams.set('s',S.start);u.searchParams.set('e',S.end);
+    const w=window.open(u.toString(),'_blank');
+    if(!w) showErr('인쇄 화면을 열지 못했습니다. 기본 브라우저(Chrome/Safari)에서 http://localhost:8787 을 열어 인쇄 버튼을 눌러 주세요.');
     return;
   }
-  printPrep();setTimeout(()=>window.print(),300);
+  printPrep();window.print();
 });
 (function autoPrint(){
   const q=new URLSearchParams(location.search);
@@ -704,7 +708,11 @@ function renderAll(){
   const today=new Date();$('#dEnd').value=ymd(today);setMode('month');
   try{GEOMAP=await (await fetch('data/geo.json',{cache:'no-store'})).json();Object.entries(GEOMAP).forEach(([k,v])=>{if(v&&v.lat)GEO[k]={lat:v.lat,lng:v.lng,exact:true}})}catch(e){}
   {const q=new URLSearchParams(location.search);if(q.has('autoprint')){S.dmode=q.get('m')||'h';S.dong=q.get('d')||'전체';if(q.get('s')&&q.get('e')){$('#dStart').value=q.get('s');$('#dEnd').value=q.get('e');S.mode='custom';$$('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode==='custom'))}}}
-  buildDongChips();initMap();renderListings();loadRone();reload().then(()=>{if(window.__autoprint)setTimeout(()=>{printPrep();window.print()},9000)});
+  buildDongChips();initMap();renderListings();loadRone();reload().then(async()=>{if(!window.__autoprint)return;
+    $('#status').textContent='인쇄 준비 중…';
+    const t0=Date.now();let quiet=0;
+    while(Date.now()-t0<3500){await new Promise(r=>setTimeout(r,150));quiet=TILE_PENDING===0?quiet+150:0;if(quiet>=450&&Date.now()-t0>700)break;}
+    printPrep();window.print();});
 })();
 </script>
 </body>
