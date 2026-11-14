@@ -197,9 +197,9 @@ footer b{color:#fff}
 
 <section>
   <h2><span class="no">동별</span><span id="dongListTitle">동별 현황</span> <small>동 선택 시 해당 동의 아파트 리스트를 보여줍니다</small></h2>
-  <div class="grid2" style="grid-template-columns:minmax(320px,4fr) 8fr">
+  <div class="grid2" style="grid-template-columns:minmax(300px,4fr) 8fr;align-items:start">
     <div class="card"><div id="dongTable"></div><div class="chartbox" style="height:200px;margin-top:10px"><canvas id="chPrice"></canvas></div><div class="note" style="text-align:center">매매 가격대별 거래건수</div></div>
-    <div class="card"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><b id="aptListTitle">아파트 리스트</b><input type="text" id="aptQ" placeholder="단지명 검색" style="margin-left:auto"></div>
+    <div class="card"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><b id="aptListTitle">아파트 리스트</b><select id="aptSel" style="margin-left:auto;min-width:min(100%,280px)" title="아파트 선택"></select></div>
       <div class="scroll" id="aptList"></div></div>
   </div>
 </section>
@@ -261,7 +261,7 @@ const HDONGS=['낙성대동','난곡동','난향동','남현동','대학동','�
 let GEOMAP={},POIALL=null;
 const CENTER={'봉천동':[37.4795,126.9530],'신림동':[37.4840,126.9290],'남현동':[37.4745,126.9790],'전체':[37.4784,126.9516]};
 const KIND={T:'매매',J:'전세',M:'월세'};
-const S={dmode:'h',dong:'전체',mode:'month',start:'',end:'',kind:'T',sort:'cnt',sel:null,deals:[],rone:null,loadedKey:'',top:[],aptQ:''};
+const S={dmode:'h',dong:'전체',mode:'month',start:'',end:'',kind:'T',sort:'cnt',sel:null,deals:[],rone:null,loadedKey:'',top:[],aptQ:'',aptSel:''};
 const GEO={}; let geoRun=0;
 
 /* ---------- format ---------- */
@@ -308,7 +308,7 @@ document.addEventListener('click',e=>{
 }));
 $('#dongSel').addEventListener('change',e=>{S.dong=e.target.value;S.sel=null;renderAll();});
 $('#lookback').addEventListener('change',renderIndexChart);
-$('#aptQ').addEventListener('input',e=>{S.aptQ=e.target.value.trim();renderAptList();});
+$('#aptSel').addEventListener('change',e=>{S.aptSel=e.target.value;renderAptList();});
 
 /* ---------- data ---------- */
 async function reload(){
@@ -473,11 +473,34 @@ function groups(kind,list){
 function renderAptList(){
   const list=cur(),Tg=groups('T',list),Jg=groups('J',list),Mg=groups('M',list);
   const all=new Map();
-  [[Tg,'T'],[Jg,'J'],[Mg,'M']].forEach(([gs,k])=>gs.forEach(g=>{const key=g.apt+'|'+g.dong;const o=all.get(key)||{apt:g.apt,dong:g.dong,by:g.by};o[k]=g;all.set(key,o)}));
-  let rows=[...all.values()].filter(o=>!S.aptQ||o.apt.includes(S.aptQ));
-  rows.sort((a,b)=>((b.T?.n||0)+(b.J?.n||0)+(b.M?.n||0))-((a.T?.n||0)+(a.J?.n||0)+(a.M?.n||0)));
-  $('#aptListTitle').textContent=(S.dong==='전체'?'관악구 전체':S.dong)+' 아파트 리스트 ('+rows.length+'개 단지)';
-  $('#aptList').innerHTML=`<table><thead><tr><th>단지명</th><th>동</th><th class="r">준공</th><th class="r">매매</th><th class="r">평균 매매가</th><th class="r">전세</th><th class="r">평균 전세</th><th class="r">월세</th></tr></thead><tbody>${rows.map(o=>`<tr><td><b>${esc(o.apt)}</b></td><td>${o.dong}</td><td class="r">${o.by||'-'}</td><td class="r">${o.T?.n||'-'}</td><td class="r">${o.T?won(o.T.avg):'-'}</td><td class="r">${o.J?.n||'-'}</td><td class="r">${o.J?won(o.J.avg):'-'}</td><td class="r">${o.M?.n||'-'}</td></tr>`).join('')||'<tr><td colspan=8 class="note">선택한 기간에 거래가 없습니다.</td></tr>'}</tbody></table>`;
+  [[Tg,'T'],[Jg,'J'],[Mg,'M']].forEach(([gs,k])=>gs.forEach(g=>{const key=g.apt+'|'+g.dong;const o=all.get(key)||{apt:g.apt,dong:g.dong,by:g.by,key};o[k]=g;all.set(key,o)}));
+  const tot=o=>(o.T?.n||0)+(o.J?.n||0)+(o.M?.n||0);
+  const rows=[...all.values()].sort((a,b)=>tot(b)-tot(a)||a.apt.localeCompare(b.apt,'ko'));
+  if(S.aptSel&&!all.has(S.aptSel)) S.aptSel='';
+  const scope=S.dong==='전체'?'관악구 전체':S.dong;
+  $('#aptListTitle').textContent=scope+' 아파트 ('+rows.length+'개 단지)';
+  $('#aptSel').innerHTML=`<option value="">▼ 단지 선택 (전체 ${rows.length}개)</option>`+rows.map(o=>`<option value="${esc(o.key)}" ${S.aptSel===o.key?'selected':''}>${esc(o.apt)}${S.dong==='전체'?' · '+o.dong:''} (${tot(o)}건)</option>`).join('');
+  const box=$('#aptList');
+  if(S.aptSel){
+    const o=all.get(S.aptSel);
+    const card=(cls,label,g,fmt)=>`<div class="kpi" style="border-top:3px solid var(--${cls})"><div class="l">${label}</div>${g?`<div class="v">${g.n}건</div><div class="s">${fmt(g)}</div>`:'<div class="v flat">-</div><div class="s">거래 없음</div>'}</div>`;
+    const rd=S.deals.filter(d=>d.apt===o.apt&&d.dong===o.dong).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12);
+    const amt=d=>d.k==='T'?won(d.price):d.k==='J'?won(d.deposit):won(d.deposit)+' / '+d.rent+'만';
+    box.className='';box.style.maxHeight='';
+    box.innerHTML=`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:17px">${esc(o.apt)}</b><span class="badge">${o.dong}</span><span class="badge">${o.by||'-'}년 준공</span><button class="btn" id="goLoc" style="margin-left:auto">📍 지도·입지분석 보기</button></div>
+      <div class="kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px">
+        ${card('sale','매매',o.T,g=>`평균 ${won(g.avg)} · 최고 ${won(g.max)}`)}
+        ${card('jeon','전세',o.J,g=>`평균 보증금 ${won(g.avg)}`)}
+        ${card('wol','월세',o.M,g=>`평균 ${won(g.avg)} / ${Math.round(g.avgRent)}만`)}</div>
+      <div class="note" style="margin-bottom:4px">최근 실거래 (최대 12건)</div>
+      <div class="scroll" style="max-height:300px"><table><thead><tr><th>구분</th><th>계약일</th><th class="r">전용㎡</th><th class="r">층</th><th class="r">금액</th></tr></thead><tbody>${rd.map(d=>`<tr><td><span class="badge" style="background:${d.k==='T'?'#fde8e8':d.k==='J'?'#dcf3f3':'#fbefd9'}">${KIND[d.k==='T'?'T':d.k==='J'?'J':'M']}</span></td><td>${d.date}</td><td class="r">${d.area}</td><td class="r">${d.floor}</td><td class="r"><b>${amt(d)}</b></td></tr>`).join('')}</tbody></table></div>`;
+    $('#goLoc').onclick=()=>analyze({name:o.apt,dong:o.dong,scroll:true});
+  }else{
+    box.className='scroll';
+    box.style.maxHeight='360px';
+    box.innerHTML=`<table><thead><tr><th>단지명</th><th>동</th><th class="r">준공</th><th class="r">매매</th><th class="r">평균 매매가</th><th class="r">전세</th><th class="r">평균 전세</th><th class="r">월세</th></tr></thead><tbody>${rows.map(o=>`<tr data-k="${esc(o.key)}" style="cursor:pointer"><td><b>${esc(o.apt)}</b></td><td>${o.dong}</td><td class="r">${o.by||'-'}</td><td class="r">${o.T?.n||'-'}</td><td class="r">${o.T?won(o.T.avg):'-'}</td><td class="r">${o.J?.n||'-'}</td><td class="r">${o.J?won(o.J.avg):'-'}</td><td class="r">${o.M?.n||'-'}</td></tr>`).join('')||'<tr><td colspan=8 class="note">선택한 기간에 거래가 없습니다.</td></tr>'}</tbody></table>`;
+    $$('#aptList tr[data-k]').forEach(tr=>tr.onclick=()=>{S.aptSel=tr.dataset.k;renderAptList();});
+  }
 }
 
 /* ---------- Top10 + map ---------- */
