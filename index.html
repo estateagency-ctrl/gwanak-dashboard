@@ -110,7 +110,33 @@ dialog input,dialog select,dialog textarea{width:100%}
 footer{background:#0e2342;color:#b9c8e2;margin-top:34px;padding:22px 0;font-size:12px}
 footer b{color:#fff}
 .err{background:#fff1f1;border:1px solid #f2b8b8;color:#a02020;padding:10px 14px;border-radius:10px;margin:12px 0}
-@media print{.controls{position:static}.scroll,.list{max-height:none}}
+@page{size:A4 portrait;margin:10mm}
+.printOnly{display:none}
+@media print{
+  html,body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{font-size:11.5px}
+  .controls,.tabs .chip,.add,.lst .del,#addBtn,#aptQ,#lookback,#dongSel,#retryLoc,.leaflet-control-zoom{display:none!important}
+  .printOnly{display:block}
+  .wrap{max-width:none;padding:0}
+  header.top .wrap{padding:8px 12px}
+  .brand svg{width:48px;height:48px}.brand h1{font-size:21px}.tel b{font-size:17px}
+  section{margin:12px 0;break-inside:auto}
+  h2{break-after:avoid;font-size:15px}
+  .card,.kpi,.lst,.loc .blk,.item,tr{break-inside:avoid}
+  .grid2,.grid3,.t10,.loc{grid-template-columns:1fr!important}
+  .grid2[style]{grid-template-columns:1fr!important}
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .chartbox{height:210px}
+  .scroll,.list{max-height:none!important;overflow:visible!important;border:0}
+  #map,#amap{height:300px;break-inside:avoid}
+  .t10 .list{padding:0}
+  .item:nth-child(n+11){display:none}
+  th{position:static}
+  footer{margin-top:14px;padding:10px 0;background:#fff!important;color:#444!important;border-top:1px solid #999}
+  footer b{color:#000}
+  .lst{box-shadow:none}
+  #printHead{padding:6px 12px;border-bottom:2px solid var(--navy);font-weight:700}
+}
 </style>
 </head>
 <body>
@@ -141,9 +167,11 @@ footer b{color:#fff}
     <input type="date" id="dStart"> ~ <input type="date" id="dEnd">
     <button class="btn" id="apply">조회</button>
   </div>
+  <button class="btn" id="printBtn" title="A4 세로 인쇄 미리보기">🖨 인쇄</button>
   <span class="note" id="status"></span>
 </div></div>
 
+<div class="printOnly" id="printHead"></div>
 <main class="wrap">
 <div id="errbox"></div>
 
@@ -637,6 +665,16 @@ function renderLoc(name,dong,g,poi){
     L.circleMarker([p.lat,p.lng],{radius:6,color:'#fff',weight:1.5,fillColor:col[p.cat]||'#555',fillOpacity:1}).addTo(AMAP).bindTooltip(p.name));
   L.marker([g.lat,g.lng],{icon:L.divIcon({className:'',html:'<div class="pin sel">★</div>',iconSize:[36,36],iconAnchor:[18,18]})}).addTo(AMAP).bindTooltip(name,{permanent:true,direction:'top',offset:[0,-16]});
 }
+
+/* ---------- 인쇄 (A4 세로) ---------- */
+function printPrep(){
+  $('#printHead').textContent=`관악구 부동산 브리핑 · ${S.dong==='전체'?'관악구 전체':S.dong+(S.dmode==='h'?'(행정동)':'(법정동)')} · 조회기간 ${S.start} ~ ${S.end} · 출력일 ${ymd(new Date())}`;
+  Object.values(CH).forEach(c=>c&&c.resize());
+  try{MAP&&MAP.invalidateSize();AMAP&&AMAP.invalidateSize();}catch(e){}
+}
+window.addEventListener('beforeprint',printPrep);
+window.addEventListener('afterprint',()=>{Object.values(CH).forEach(c=>c&&c.resize());try{MAP&&MAP.invalidateSize();AMAP&&AMAP.invalidateSize();}catch(e){}});
+$('#printBtn').addEventListener('click',()=>{printPrep();setTimeout(()=>window.print(),300)});
 
 /* ---------- boot ---------- */
 function renderAll(){
