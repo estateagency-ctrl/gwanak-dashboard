@@ -258,7 +258,7 @@ const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelect
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const DONGS=['봉천동','신림동','남현동'];
 const HDONGS=['낙성대동','난곡동','난향동','남현동','대학동','미성동','보라매동','삼성동','서림동','서원동','성현동','신림동','신사동','신원동','은천동','인헌동','조원동','중앙동','청룡동','청림동','행운동'];
-let GEOMAP={};
+let GEOMAP={},POIALL=null;
 const CENTER={'봉천동':[37.4795,126.9530],'신림동':[37.4840,126.9290],'남현동':[37.4745,126.9790],'전체':[37.4784,126.9516]};
 const KIND={T:'매매',J:'전세',M:'월세'};
 const S={dmode:'h',dong:'전체',mode:'month',start:'',end:'',kind:'T',sort:'cnt',sel:null,deals:[],rone:null,loadedKey:'',top:[],aptQ:''};
@@ -600,9 +600,17 @@ let AMAP,ALAYER,locRun=0;
 async function analyze({name,dong,scroll}){
   const run=++locRun;
   if(scroll!==false) $('#locSec').scrollIntoView({behavior:'smooth',block:'start'});
-  $('#locBody').innerHTML=`<div class="card spin">📍 ${esc(name)} 주변 입지 정보를 불러오는 중… (최대 40초)</div>`;
+  $('#locBody').innerHTML=`<div class="card spin">📍 ${esc(name)} 주변 입지 정보를 불러오는 중…</div>`;
   const g=await geoOf(name,dong); if(run!==locRun) return;
   let poi=null;
+  if(!POIALL){ // 사전 저장 데이터가 아직 로드 중이면 잠깐 대기
+    for(let i=0;i<10&&!POIALL;i++) await new Promise(r=>setTimeout(r,200));
+  }
+  if(POIALL){
+    poi=POIALL.filter(x=>Math.abs(x.lat-g.lat)<0.025&&Math.abs(x.lng-g.lng)<0.032&&dist(g.lat,g.lng,x.lat,x.lng)<=2500);
+    if(run!==locRun) return;
+    return renderLoc(name,dong,g,poi);
+  }
   try{const j=await jget(`/api/poi?lat=${g.lat}&lng=${g.lng}`,1);if(j.ok)poi=j.items}catch(e){}
   if(run!==locRun) return;
   renderLoc(name,dong,g,poi);
@@ -634,7 +642,7 @@ function renderLoc(name,dong,g,poi){
    <h4>고등학교</h4><ul>${lv(/고등|고$/).map(s=>li(s.name,dtxt(s.d))).join('')||'<li class="note">1.5km 내 정보 없음</li>'}</ul><div class="note" style="margin-top:6px">실제 학교 배정은 관할 교육지원청의 학군·통학구역 기준으로 확인하세요.</div>`
    :`<h3>🎓 학군</h3><div class="note">학교 정보를 불러오지 못했습니다. 아래 '다시 조회'를 눌러 주세요.</div>`;
   // 상권
-  const shops=near(P,g,4,x=>x.cat==='shop'&&/department|mall/.test(x.shop)||/백화점|몰$/.test(x.name));
+  const shops=near(P,g,4,x=>x.cat==='shop'&&(/department|mall/.test(x.shop)||/백화점|몰$/.test(x.name)));
   const marts=near(P,g,4,x=>x.cat==='shop'&&/supermarket/.test(x.shop)&&!/백화점/.test(x.name));
   const cafes=near(P,g,5,x=>x.cat==='cafe',x=>x.name+Math.round(x.lat*1e3)+Math.round(x.lng*1e3));
   const gov=near(P,g,4,x=>x.cat==='gov');
@@ -708,6 +716,7 @@ function renderAll(){
   const today=new Date();$('#dEnd').value=ymd(today);setMode('month');
   try{GEOMAP=await (await fetch('data/geo.json',{cache:'no-store'})).json();Object.entries(GEOMAP).forEach(([k,v])=>{if(v&&v.lat)GEO[k]={lat:v.lat,lng:v.lng,exact:true}})}catch(e){}
   {const q=new URLSearchParams(location.search);if(q.has('autoprint')){S.dmode=q.get('m')||'h';S.dong=q.get('d')||'전체';if(q.get('s')&&q.get('e')){$('#dStart').value=q.get('s');$('#dEnd').value=q.get('e');S.mode='custom';$$('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode==='custom'))}}}
+  fetch('data/poi.json').then(r=>r.ok?r.json():null).then(j=>{if(j&&j.items)POIALL=j.items.map(x=>({cat:x.c,name:x.n,lat:x.a,lng:x.o,shop:x.s}))}).catch(()=>{});
   buildDongChips();initMap();renderListings();loadRone();reload().then(async()=>{if(!window.__autoprint)return;
     $('#status').textContent='인쇄 준비 중…';
     const t0=Date.now();let quiet=0;
