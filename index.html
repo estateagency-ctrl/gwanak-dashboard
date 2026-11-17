@@ -112,6 +112,9 @@ footer b{color:#fff}
 .err{background:#fff1f1;border:1px solid #f2b8b8;color:#a02020;padding:10px 14px;border-radius:10px;margin:12px 0}
 
 /* ---------- 모바일 반응형 ---------- */
+.grid2>*,.grid3>*,.t10>*,.loc>*,.cards>*{min-width:0}
+#dongTable{overflow-x:auto;max-width:100%}
+body{overflow-x:clip}
 @media(max-width:820px){
   .wrap{padding:0 14px}
   .grid2[style]{grid-template-columns:1fr!important}
@@ -150,6 +153,8 @@ footer b{color:#fff}
   .item{grid-template-columns:30px 1fr auto;gap:8px;padding:9px 4px}
   .item .pr{font-size:13px}
   #map,#amap{height:300px}
+  #dongTable{max-height:300px;overflow:auto}
+  #dongTable th,#dongTable td{padding:6px 5px;font-size:12px}
   #aptList .kpis{grid-template-columns:1fr!important}
   #aptList>div:first-child{gap:6px!important}
   #aptList .btn{margin-left:0!important;width:100%}
